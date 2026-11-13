@@ -32,9 +32,9 @@ async function onSubmit() {
     if (serverError) {
       error.value = serverError
     } else if (status === 404) {
-      error.value = 'Backend not found (404). Is the PHP server running on port 8000? Run smartterminal_backend\\start-backend.bat'
+      error.value = 'Backend not found (404). The Render backend may be sleeping or down.'
     } else if (!err?.response) {
-      error.value = 'Cannot reach backend. Is the PHP server running on http://localhost:8000?'
+      error.value = 'Cannot reach backend. Is the Render backend running at ' + import.meta.env.VITE_API_URL + '?'
     } else {
       error.value = 'Login failed. Check username and password.'
     }
