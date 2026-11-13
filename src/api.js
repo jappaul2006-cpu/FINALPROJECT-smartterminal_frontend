@@ -1,9 +1,18 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://manga-smartterminal-backendq.onrender.com'
+// Base URL of the backend API.
+//
+// Leave VITE_API_URL empty for local development: every request then uses a
+// relative path ("/api/...") and the Vite dev server proxies it to the PHP
+// backend on http://localhost:8000 (see vite.config.ts). The browser only
+// ever talks to its own origin, so CORS can never break the app.
+//
+// Set VITE_API_URL to an absolute URL (e.g. http://localhost:8000) to call
+// the backend directly - the backend then allows the origins listed in its
+// CORS_ORIGIN environment variable.
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
-// Render free tier spins down after inactivity and can take 50+ seconds to wake up.
-// Use a generous timeout so the first request doesn't fail while the backend boots.
+// The local backend is always up, so the requests must not wait a long time.
 const TIMEOUT_MS = 60_000
 
 const api = axios.create({
@@ -51,7 +60,7 @@ async function tryRefresh() {
 }
 
 // Retry network-level failures (ECONNRESET, ETIMEDOUT, etc.) once — these
-// commonly happen when the Render free-tier backend is spinning up from sleep.
+// happen when the PHP backend is (re)starting or was closed for a moment.
 let requestRetry = new Map()
 async function retryOnce(config, error) {
   const key = config.url || ''
@@ -61,7 +70,7 @@ async function retryOnce(config, error) {
     return Promise.reject(error)
   }
   requestRetry.set(key, count + 1)
-  // Wait briefly for the backend to finish waking up before retrying.
+  // Wait briefly for the backend to come back up before retrying.
   await new Promise((r) => setTimeout(r, 3_000))
   try {
     requestRetry.delete(key)

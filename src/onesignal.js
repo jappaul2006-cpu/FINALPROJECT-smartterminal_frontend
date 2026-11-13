@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OneSignal Web Push (v16) integration.
  *
  * The passenger display board (/passenger-display) is public and anonymous:
@@ -234,9 +234,10 @@ export async function requestPushPermission(OneSignal) {
       await OneSignal.Notifications.requestPermission()
     }
   } catch (err) {
-    // OneSignal could not open the prompt (for example the SDK failed to
-    // register its worker). Fall back to the native browser prompt so the
-    // visitor still gets the Allow/Block choice.
+    // OneSignal could not open the prompt (for example the browser has the
+    // permission blocked, or the SDK failed to register its worker). Fall
+    // back to the native browser prompt so the visitor still gets the
+    // Allow/Block choice.
     console.warn('[OneSignal] optIn failed, trying the native prompt:', err)
     lastError = err
     try {
@@ -248,16 +249,9 @@ export async function requestPushPermission(OneSignal) {
     }
   }
 
-  // Make sure the opt-in flag is really set. The SDK persists it locally
-  // and asks the service worker to update the subscription on OneSignal.
-  try {
-    if (subscription && !subscription.optedIn) {
-      await (subscription.optedIn = true)
-    }
-  } catch (err) {
-    console.warn('[OneSignal] could not opt in to push subscription:', err)
-    lastError = err
-  }
+  // Note: `PushSubscription.optedIn` is a read-only property of the SDK.
+  // Assigning to it throws "Cannot set property optedIn" and achieves
+  // nothing - optIn() above already persists the opt-in. Do not set it here.
 
   const status = await oneSignalStatus(OneSignal)
   status.error = lastError ? String(lastError?.message || lastError) : null
