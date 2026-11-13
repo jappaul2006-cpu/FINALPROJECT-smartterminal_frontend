@@ -79,6 +79,12 @@ async function enableApiProxy() {
   try {
     const response = await fetch('/onesignal-api/__health', { method: 'GET' })
     if (!response.ok) return
+    // A SPA fallback (for example Vercel's catch-all rewrite) answers every
+    // unknown path with index.html and a 200 status. Only trust the proxy
+    // when the answer really is our JSON health payload - otherwise the SDK
+    // would point at /onesignal-api/ and every sync call would return HTML.
+    const payload = await response.json().catch(() => null)
+    if (!payload || payload.ok !== true) return
     window.__ONESIGNAL_API_BASE__ = `${window.location.origin}/onesignal-api/`
     console.info('[OneSignal] using the first-party API proxy')
   } catch (_) {
