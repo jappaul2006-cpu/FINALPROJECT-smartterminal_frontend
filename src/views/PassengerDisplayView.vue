@@ -352,7 +352,7 @@ table {
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: auto;
   font-size: 0.95rem;
   margin-bottom: 1.5rem;
 }

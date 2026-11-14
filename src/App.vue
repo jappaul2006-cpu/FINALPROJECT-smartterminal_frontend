@@ -9,6 +9,7 @@ const catalog = useCatalogStore()
 const router = useRouter()
 const showMenu = ref(false)
 const userMenuRef = ref(null)
+const sidebarOpen = ref(false)
 
 const isLoginPage = computed(() => {
   const path = router.currentRoute.value.path
@@ -49,32 +50,46 @@ const userName = computed(() => auth.user?.full_name || auth.user?.username || '
 
 async function onLogout() {
   showMenu.value = false
+  sidebarOpen.value = false
   await auth.logout()
   router.push('/login')
 }
 
 function closeMenu() { showMenu.value = false }
 function toggleMenu() { showMenu.value = !showMenu.value }
+function toggleSidebar() { sidebarOpen.value = !sidebarOpen.value }
+function closeSidebar() { sidebarOpen.value = false }
 function onDocClick(e) {
   if (showMenu.value && userMenuRef.value && !userMenuRef.value.contains(e.target)) showMenu.value = false
 }
+function onKeydown(e) { if (e.key === 'Escape') sidebarOpen.value = false }
 
-onBeforeUnmount(() => { document.removeEventListener('click', onDocClick) })
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocClick)
+  document.removeEventListener('keydown', onKeydown)
+  document.body.style.overflow = ''
+})
 
 // Warm the shared cache the moment the admin is authenticated so the
 // first table renders instantly. Runs after login and on page load
 // when a session already exists — never blocks the UI.
 onMounted(() => {
   document.addEventListener('click', onDocClick)
+  document.addEventListener('keydown', onKeydown)
   if (auth.isLoggedIn) catalog.prefetchReference()
 })
 watch(() => auth.isLoggedIn, (v) => { if (v) catalog.prefetchReference() })
+// Close the mobile sidebar whenever the route changes (e.g. link tap)
+watch(() => router.currentRoute.value.fullPath, () => { sidebarOpen.value = false })
+// Lock body scroll while the sidebar is open on mobile
+watch(sidebarOpen, (v) => { document.body.style.overflow = v ? 'hidden' : '' })
 </script>
 
 <template>
   <div class="app" :class="{ bare: isLoginPage || isPublicBoard }">
     <header v-if="!isLoginPage && !isPublicBoard" class="topbar">
       <div class="topbar-inner">
+        <button type="button" class="hamburger" :class="{ active: sidebarOpen }" @click="toggleSidebar" aria-label="Toggle navigation menu" :aria-expanded="sidebarOpen">☰</button>
         <RouterLink to="/dashboard" class="brand">
           <span class="brand-badge">🚌</span>
           <span class="brand-name">Smart<span class="brand-or">Terminal</span></span>
@@ -98,6 +113,34 @@ watch(() => auth.isLoggedIn, (v) => { if (v) catalog.prefetchReference() })
         </div>
       </div>
     </header>
+    <div v-if="sidebarOpen && !isLoginPage && !isPublicBoard" class="sidebar-backdrop" @click="closeSidebar"></div>
+    <aside v-if="!isLoginPage && !isPublicBoard" class="sidebar" :class="{ open: sidebarOpen }" aria-label="Main navigation">
+      <div class="sidebar-head">
+        <div class="brand sidebar-brand">
+          <span class="brand-badge">🚌</span>
+          <span class="brand-name">Smart<span class="brand-or">Terminal</span></span>
+        </div>
+        <button type="button" class="sidebar-close" @click="closeSidebar" aria-label="Close navigation menu">✕</button>
+      </div>
+      <nav class="sidebar-nav">
+        <RouterLink v-for="l in links" :key="l.to" :to="l.to" class="sidebar-link" @click="closeSidebar">
+          <span class="nav-icon">{{ l.icon }}</span>{{ l.label }}
+        </RouterLink>
+        <RouterLink to="/passenger-display" class="sidebar-link" @click="closeSidebar">
+          <span class="nav-icon">▭</span>Passenger Screen
+        </RouterLink>
+      </nav>
+      <div v-if="auth.isLoggedIn" class="sidebar-foot">
+        <div class="sidebar-user">
+          <span class="sidebar-avatar">👤</span>
+          <div class="sidebar-user-meta">
+            <div class="sidebar-user-name">{{ userName }}</div>
+            <div class="sidebar-user-role">{{ auth.role }}</div>
+          </div>
+        </div>
+        <button type="button" class="sidebar-logout" @click="onLogout">Logout</button>
+      </div>
+    </aside>
     <main :class="{ 'full-bleed': isLoginPage || isPublicBoard }">
       <RouterView />
     </main>
@@ -136,6 +179,30 @@ main { padding: 0; flex: 1; width: 100%; }
 .dropdown-head small { display: block; color: #6b7280; font-weight: 500; text-transform: capitalize; font-size: .85rem; margin-top: .1rem; }
 .dropdown-item { width: 100%; text-align: left; background: none; border: none; padding: .7rem .95rem; cursor: pointer; font-size: 1rem; font-weight: 600; }
 .dropdown-item:hover { background: #f1f5f9; }
+
+/* Hamburger button + slide-in sidebar (mobile navigation) */
+.hamburger { display: none; background: rgba(255,255,255,.1); border: 1.5px solid rgba(255,255,255,.4); color: #fff; border-radius: 10px; width: 46px; height: 46px; font-size: 1.3rem; line-height: 1; cursor: pointer; align-items: center; justify-content: center; flex-shrink: 0; }
+.hamburger:hover { background: rgba(255,255,255,.2); }
+.sidebar-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 240; animation: sidebarFadeIn .2s ease; }
+@keyframes sidebarFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 292px; max-width: 86vw; background: #0c2a4b; z-index: 250; display: flex; flex-direction: column; transform: translateX(-105%); visibility: hidden; transition: transform .28s ease, visibility .28s; box-shadow: 6px 0 28px rgba(2,6,23,.45); }
+.sidebar.open { transform: translateX(0); visibility: visible; }
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .8rem .9rem; border-bottom: 1px solid rgba(255,255,255,.14); flex-shrink: 0; }
+.sidebar-close { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.22); color: #fff; width: 42px; height: 42px; border-radius: 9px; font-size: 1.15rem; cursor: pointer; flex-shrink: 0; }
+.sidebar-close:hover { background: rgba(255,255,255,.18); }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: .75rem .7rem 1rem; }
+.sidebar-link { display: flex; align-items: center; gap: .75rem; color: #dbeafe; text-decoration: none; padding: .8rem .9rem; border-radius: 10px; font-size: 1.05rem; font-weight: 600; margin-bottom: .3rem; }
+.sidebar-link .nav-icon { margin-right: 0; font-size: 1.15rem; }
+.sidebar-link:hover { background: rgba(255,255,255,.12); color: #fff; }
+.sidebar-link.router-link-active { background: #fbbf24; color: #111827; font-weight: 800; }
+.sidebar-foot { border-top: 1px solid rgba(255,255,255,.14); padding: .75rem .8rem .95rem; flex-shrink: 0; }
+.sidebar-user { display: flex; align-items: center; gap: .65rem; padding: .3rem .3rem .7rem; min-width: 0; }
+.sidebar-avatar { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.sidebar-user-meta { min-width: 0; }
+.sidebar-user-name { color: #fff; font-weight: 800; font-size: 1.02rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-role { color: #93c5fd; font-size: .82rem; text-transform: capitalize; margin-top: .1rem; }
+.sidebar-logout { width: 100%; background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); color: #fca5a5; padding: .68rem 1rem; border-radius: 9px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.sidebar-logout:hover { background: rgba(248,113,113,.24); color: #fecaca; }
 
 /* Page: larger container - uses screen without overstretching tables */
 .page { max-width: 1720px; width: 100%; margin: 0 auto; padding: 1.75rem 1.75rem 2.25rem; }
@@ -212,14 +279,43 @@ table.data tr:last-child td { border-bottom: none; }
 @media (max-width: 1100px) {
   .stat-grid, .stat-grid5 { grid-template-columns: repeat(3,1fr) !important; }
 }
+/* Mobile & tablet: hamburger navigation + slide-in sidebar */
+@media (max-width: 1024px) {
+  .hamburger { display: inline-flex; }
+  .topnav { display: none; }
+}
 @media (max-width: 900px) {
   .stat-grid, .stat-grid5 { grid-template-columns: repeat(2,1fr) !important; }
   .two-col { grid-template-columns: 1fr !important; }
-  .topbar-inner { padding: 0 .75rem; gap: .5rem; }
+  .topbar-inner { padding: 0 .75rem; gap: .5rem; min-height: 58px; }
   .brand-name { font-size: 1.05rem; }
-  .nav-item { padding: .55rem .6rem; font-size: .9rem; }
   .page, .list-view { padding: .9rem .9rem 1.25rem !important; }
   .page-title, .list-view h1 { font-size: 1.5rem !important; }
+  .page-head { gap: .6rem; }
+  /* Tables: scroll horizontally inside their container instead of breaking/squishing */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  table.data th, table.data td { white-space: nowrap; }
+  .cell-wrap { white-space: normal !important; min-width: 180px; max-width: 300px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .modal { max-height: 92vh; }
+  .modal-overlay { padding: 3vh .6rem .6rem; }
+}
+/* Small phones: keep the top bar compact */
+@media (max-width: 640px) {
+  .topbar-inner { padding: 0 .55rem; gap: .4rem; min-height: 54px; }
+  .hamburger { width: 42px; height: 42px; border-radius: 9px; font-size: 1.15rem; }
+  .brand-badge { font-size: .95rem; padding: .2rem .3rem; border-radius: 7px; }
+  .brand-name { font-size: .98rem; }
+  .btn-outline { display: none; }
+  .user-name, .caret { display: none; }
+  .user-btn { padding: .45rem .5rem; }
+  .page, .list-view { padding: .75rem .6rem 1.1rem !important; }
+  .page-title, .list-view h1 { font-size: 1.3rem !important; }
+  .filter-field input, .filter-field select { min-width: 0; width: 100%; }
+  .filter-field { flex: 1 1 140px; }
+  .filter-row { gap: .5rem; }
+  .head-actions { flex-wrap: wrap; width: 100%; }
+  .head-actions .btn-yellow, .head-actions .btn-ghost { flex: 1 1 auto; text-align: center; }
 }
 
 @media print {

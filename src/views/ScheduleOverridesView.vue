@@ -88,7 +88,7 @@ onMounted(() => load())
           <td>#{{ o.trip_id }}</td>
           <td>{{ o.old_departure }}</td>
           <td>{{ o.new_departure }}</td>
-          <td>{{ o.reason || '—' }}</td>
+          <td class="cell-wrap">{{ o.reason || '-' }}</td>
           <td>{{ o.overridden_by ?? '—' }}</td>
           <td>{{ o.created_at }}</td>
         </tr>
@@ -106,7 +106,7 @@ h1 { color: #333; margin-bottom: 1.5rem; }
 label { font-size: 0.9rem; display: block; }
 select, input { width: 100%; margin-top: 0.3rem; padding: 0.7rem; border: 1px solid #d1d5db; border-radius: 6px; }
 button { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 0.7rem 1.2rem; cursor: pointer; }
-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
 th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 0.9rem; }
 th { background: #f5f5f5; }
 .loading { text-align: center; padding: 3rem; color: #666; }

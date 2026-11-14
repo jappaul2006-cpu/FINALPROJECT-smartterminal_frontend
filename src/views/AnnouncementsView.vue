@@ -98,7 +98,7 @@ onMounted(() => load())
           <thead><tr><th>Message</th><th>Category</th><th>Voice</th><th>By</th><th>When</th></tr></thead>
           <tbody>
             <tr v-for="a in items" :key="a.id">
-              <td>{{ a.message }}</td>
+              <td class="cell-wrap">{{ a.message }}</td>
               <td><span class="badge" :class="catBadge(a.category)" style="text-transform:capitalize">{{ a.category }}</span></td>
               <td>{{ a.voice }}</td>
               <td>{{ creatorName(a.created_by) }}</td>

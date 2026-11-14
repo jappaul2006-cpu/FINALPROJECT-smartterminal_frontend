@@ -137,8 +137,6 @@ onMounted(load)
     <div v-if="loading" class="empty-box">Loading dashboard…</div>
 
     <template v-else>
-      <div class="info-bar">🔔 <strong>Push notifications (FCM) are off.</strong> Alerts are still stored and shown in-app. Paste your Firebase service-account values into <code>.env</code> and set <code>FCM_ENABLED=1</code> to enable delivery.</div>
-
       <div class="stat-grid">
         <div class="card stat-card">
           <div>
@@ -212,7 +210,7 @@ onMounted(load)
                 <td><strong>{{ overrideDest(o) }}</strong></td>
                 <td>{{ fmtDateShort(o.old_departure) }}</td>
                 <td><strong>{{ fmtDateShort(o.new_departure) }}</strong></td>
-                <td>{{ o.reason || '—' }}</td>
+                <td class="cell-wrap">{{ o.reason || '—' }}</td>
                 <td>{{ overrideBy(o) }}</td>
                 <td class="muted">{{ timeAgo(o.created_at) }}</td>
               </tr>
@@ -225,7 +223,7 @@ onMounted(load)
 </template>
 
 <style scoped>
-.head-actions { display: flex; gap: .5rem; }
+.head-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .head-actions a { text-decoration: none; }
 .stat-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: .8rem; margin-bottom: .8rem; }
 .stat-card { display: flex; justify-content: space-between; align-items: flex-start; padding: .9rem 1rem; }
