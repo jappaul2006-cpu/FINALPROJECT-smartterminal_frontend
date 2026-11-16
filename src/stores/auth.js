@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
+import { useCatalogStore } from '@/stores/catalog'
 
 const STORAGE_KEY = 'st_user'
 
@@ -20,6 +21,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username, password) {
     const res = await api.post('/api/login', { username, password })
     const data = res.data?.data || res.data
+    // Drop every cached list from any previous session on this browser
+    // so a driver never sees an admin's cached trips/tickets (and vice
+    // versa). Subsequent fetches re-request data for the new account.
+    try { useCatalogStore().invalidateAll() } catch (_) {}
     user.value = data
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -38,6 +43,8 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         localStorage.removeItem(STORAGE_KEY)
       } catch (_) {}
+      // Wipe cached lists so the next account on this browser starts clean.
+      try { useCatalogStore().invalidateAll() } catch (_) {}
     }
   }
 

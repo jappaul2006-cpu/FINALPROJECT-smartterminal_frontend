@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useCatalogStore } from '@/stores/catalog'
@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router'
 const auth = useAuthStore()
 const catalog = useCatalogStore()
 const router = useRouter()
+const isDriverRole = computed(() => auth.role === 'driver')
 const tickets = ref([])
 const trips = ref([])
 const vehicles = ref([])
@@ -69,7 +70,10 @@ async function checkCode(qr){
     // lookup by qr_code
     const found = tickets.value.find(t => String(t.qr_code||'').toLowerCase() === c.toLowerCase())
     if (!found) {
-      result.value = { ok:false, title:'Invalid ticket', msg:`Code ${c} was not found.` }
+      const msg = isDriverRole.value
+        ? `Code ${c} was not found — it may belong to a trip assigned to another driver.`
+        : `Code ${c} was not found.`
+      result.value = { ok:false, title:'Invalid ticket', msg }
       return
     }
     if (found.scanned_at || String(found.status||'').toLowerCase() === 'scanned' || String(found.status||'').toLowerCase() === 'boarded') {

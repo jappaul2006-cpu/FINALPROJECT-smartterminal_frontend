@@ -19,6 +19,24 @@ const toast = ref(null)
 const selectedTrip = ref('')
 const showIssue = ref(false)
 const issueForm = ref({ trip_id: '', passenger_name: '', contact_no: '' })
+// Drivers are scoped server-side to trips assigned to them (backend
+// /api/trips and /api/tickets return own data when a driver JWT is
+// presented). We only detect the profile here to warn when missing.
+const isDriverRole = computed(() => auth.role === 'driver')
+const myDriverId = ref(null)
+const driverProfileChecked = ref(false)
+
+async function resolveMyDriver(){
+  try {
+    const drivers = await catalog.fetch('drivers')
+    const match = (drivers || []).find((d) => String(d.user_id) === String(auth.user?.id))
+    myDriverId.value = match?.id ?? null
+  } catch (_) {
+    myDriverId.value = null
+  } finally {
+    driverProfileChecked.value = true
+  }
+}
 
 function showToast(m){ toast.value = m; setTimeout(()=>{ toast.value=null }, 2200) }
 
@@ -133,7 +151,10 @@ function openIssue(){
 
 function applyFilter(){ /* selectedTrip is reactive - instant, no reload needed */ }
 
-onMounted(() => load())
+onMounted(async () => {
+  if (isDriverRole.value) await resolveMyDriver()
+  await load()
+})
 </script>
 
 <template>
@@ -146,6 +167,7 @@ onMounted(() => load())
       </div>
     </div>
     <div v-if="error" class="error-bar">{{ error }}</div>
+    <div v-if="isDriverRole && driverProfileChecked && myDriverId === null" class="info-bar" style="margin-bottom:.9rem">Driver mode: no driver profile is linked to your account yet. Ask the admin to set it up — until then you will not see any trips or tickets here.</div>
 
     <div class="filter-grid">
       <div class="field"><label>Trip</label><select v-model="selectedTrip"><option value="">All trips</option><option v-for="t in filterableTrips" :key="t.id" :value="t.id">{{ fmtTripOption(t) }}</option></select></div>
