@@ -12,7 +12,7 @@ const loading = ref(true)
 const error = ref(null)
 const toast = ref(null)
 const showCompose = ref(false)
-const form = ref({ message: '', category: 'boarding', voice: 'Filipino (PH)' })
+const form = ref({ message: '', category: 'Boarding' })
 
 function showToast(m){ toast.value = m; setTimeout(()=>{ toast.value=null }, 2200) }
 function timeAgo(v){
@@ -32,7 +32,6 @@ const templates = [
   { key: 'general', label: 'General', message: 'Please prepare your tickets. Scanning is required before boarding.', category: 'General' },
 ]
 
-function voiceCode(label){ return label === 'Filipino (PH)' ? 'fil-PH' : label === 'English (PH)' ? 'en-PH' : 'fil-PH' }
 function categoryCode(label){ return { Boarding:'boarding', Departure:'departure', Delay:'delay', Safety:'safety', General:'general' }[label] || 'general' }
 function catBadge(c){ return c === 'boarding' ? 'badge-yellow' : 'badge-light' }
 function creatorName(id){ return users.value.find(u => String(u.id)===String(id))?.full_name || (id ? `User #${id}` : '—') }
@@ -47,15 +46,15 @@ async function load({ force = false } = {}){
   finally { loading.value = false }
 }
 
-function applyTemplate(t){ form.value = { message: t.message, category: t.category, voice: 'Filipino (PH)' }; showCompose.value = true }
-function openCompose(){ form.value = { message:'', category:'Boarding', voice:'Filipino (PH)' }; showCompose.value = true }
+function applyTemplate(t){ form.value = { message: t.message, category: t.category }; showCompose.value = true }
+function openCompose(){ form.value = { message:'', category:'Boarding' }; showCompose.value = true }
 
 async function send(){
   try {
     const res = await api.post('/api/announcements', {
       message: form.value.message.substr(0,255),
       category: categoryCode(form.value.category),
-      voice: voiceCode(form.value.voice),
+      // voice omitted on purpose: backend defaults it to fil-PH
       created_by: auth.user?.id ?? null,
     })
     showCompose.value = false
@@ -95,12 +94,11 @@ onMounted(() => load())
       <div v-if="items.length === 0" class="empty-box muted">No announcements yet.</div>
       <div v-else style="overflow:auto">
         <table class="data">
-          <thead><tr><th>Message</th><th>Category</th><th>Voice</th><th>By</th><th>When</th></tr></thead>
+          <thead><tr><th>Message</th><th>Category</th><th>By</th><th>When</th></tr></thead>
           <tbody>
             <tr v-for="a in items" :key="a.id">
               <td class="cell-wrap">{{ a.message }}</td>
               <td><span class="badge" :class="catBadge(a.category)" style="text-transform:capitalize">{{ a.category }}</span></td>
-              <td>{{ a.voice }}</td>
               <td>{{ creatorName(a.created_by) }}</td>
               <td class="muted">{{ timeAgo(a.created_at) }}</td>
             </tr>
@@ -114,9 +112,8 @@ onMounted(() => load())
         <form @submit.prevent="send">
           <div class="modal-body">
             <div class="field"><label>Message</label><textarea v-model="form.message" rows="4" required maxlength="255"></textarea><div class="muted" style="margin-top:.2rem">Shown as a banner and spoken aloud on the terminal screen.</div></div>
-            <div class="form-grid" style="margin-top:1rem">
+            <div class="form-grid" style="margin-top:1rem; grid-template-columns:1fr">
               <div class="field"><label>Category</label><select v-model="form.category"><option>Boarding</option><option>Departure</option><option>Delay</option><option>Safety</option><option>General</option></select></div>
-              <div class="field"><label>Voice</label><select v-model="form.voice"><option>Filipino (PH)</option><option>English (PH)</option></select></div>
             </div>
           </div>
           <div class="modal-foot"><button type="button" class="btn-ghost" @click="showCompose = false">Cancel</button><button type="submit" class="btn-yellow">✈ Send</button></div>
